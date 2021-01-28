@@ -5,7 +5,9 @@ let gTplData = {
   'pendingUninstall': 0,
   'options': {
     'globalExcludesStr': '',
+    'useCodeMirror': true,
   },
+  'menuCommands': [],
   'originGlob': null,
   'userScripts': {
     'active': [],
@@ -58,6 +60,22 @@ function onKeyDown(event) {
     event.preventDefault();
     switchFocus(-1);
   }
+
+  if (document.body.id === 'menu-commands'
+      && Array.from(event.key).length /* code point count */ === 1) {
+    const k = CSS.escape(event.key.toLowerCase());
+    const commands = document.querySelectorAll(
+        `.menu-commands [aria-keyshortcuts="${k}" i]`);
+
+    if (commands.length === 1) {
+      commands[0].click();
+    } else if (commands.length > 1) {
+      const nextIndex = Array.from(commands)
+          .findIndex(command => command.matches(':focus')) + 1;
+      const command = commands[nextIndex < commands.length ? nextIndex : 0];
+      command.focus();
+    }
+  }
 }
 
 
@@ -85,6 +103,11 @@ function onLoad() {
     tinybind.bind(document.body, gTplData);
 
     document.body.id = 'main-menu';
+    // At this point, non-main sections aren't visible, but they don't have
+    // visibility: hidden. For accessibility, it's important that we set this
+    // so they don't appear to accessibility clients.
+    // onTransitionEnd takes care of this.
+    onTransitionEnd();
 
     setTimeout(window.focus, 0);
   }
@@ -106,12 +129,22 @@ function onLoad() {
         userScripts = userScripts_;
         finish();
       });
+  chrome.tabs.query({'active': true, 'currentWindow': true}, tabs => {
+    if (tabs.length) {
+      chrome.runtime.sendMessage(
+          {'name': 'ListMenuCommands', 'tabId': tabs[0].id},
+          function(menuCommands) {
+            gTplData.menuCommands = menuCommands;
+          });
+    }
+  });
 
   numPending++;
   chrome.runtime.sendMessage(
       {'name': 'OptionsLoad'},
       options => {
         gTplData.options.globalExcludesStr = options.excludes;
+        gTplData.options.useCodeMirror = options.useCodeMirror;
         finish();
       });
 
@@ -137,12 +170,17 @@ function onMouseOver(event) {
 }
 
 
-function onTransitionEnd() {
+function onTransitionEnd(e) {
   // After a CSS transition has moved a section out of the visible area,
   // force it to be hidden, so that it cannot gain focus.
   for (let section of document.getElementsByTagName('section')) {
-    section.style.visibility = (section.className == document.body.id
-        ? 'visible' : 'hidden');
+    let isCurrent = section.className == document.body.id;
+    section.style.visibility = isCurrent ? 'visible' : 'hidden';
+    if (isCurrent && e && e.target.tagName != 'TEXTAREA') {
+      // Make screen readers report the new section like a dialog. Otherwise,
+      // they would report nothing.
+      section.focus();
+    }
   }
 }
 
@@ -181,6 +219,10 @@ function activate(el) {
       gMainFocusedItem = document.activeElement;
       document.body.id = 'options';
       return;
+    case 'open-menu-commands':
+      gMainFocusedItem = document.activeElement;
+      document.body.id = 'menu-commands';
+      return;
     case 'open-user-script-options':
       gMainFocusedItem = document.activeElement;
       document.body.id = 'user-script-options';
@@ -214,7 +256,7 @@ function activate(el) {
       return;
 
     case 'new-user-script':
-      newUserScript();
+      newUserScript(!gTplData.options.useCodeMirror);
       return;
     case 'toggle-global-enabled':
       browser.runtime.sendMessage({'name': 'EnabledToggle'})
@@ -252,6 +294,17 @@ function activate(el) {
       return;
   }
 
+  // Check if it's a menu command by examing the gTplData.menuCommands object
+  let command = el.getAttribute('command');
+  let menuCommand = gTplData.menuCommands.find(menuCommand => menuCommand.id === command);
+  if (menuCommand) {
+    // Found a menu command, execute it
+    chrome.runtime.sendMessage(
+        {'name': 'MenuCommandClick', 'id': menuCommand.id},
+        () => window.close());
+    return;
+  }
+
   let url = el.getAttribute('data-url');
   if (url) {
     chrome.tabs.create({'active': true, 'url': url});
@@ -276,7 +329,7 @@ function addOriginGlobTo(str) {
 
 
 function loadScripts(userScriptsDetail, url) {
-  userScriptsDetail.sort((a, b) => a.name.localeCompare(b.name));
+  userScriptsDetail.sort((a, b) => i18nUserScript('name', a).localeCompare(i18nUserScript('name', b)));
   for (let userScriptDetail of userScriptsDetail) {
     let userScript = new EditableUserScript(userScriptDetail);
     let tplItem = userScript.details;
@@ -301,6 +354,7 @@ function navigateAway() {
       chrome.runtime.sendMessage({
         'name': 'OptionsSave',
         'excludes': gTplData.options.globalExcludesStr.trim(),
+        'useCodeMirror': gTplData.options.useCodeMirror,
       }, logUnhandledError);
       break;
     case 'user-script-options':

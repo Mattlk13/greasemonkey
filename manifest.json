@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "__MSG_extName__",
-  "version": "4.9",
+  "version": "4.11",
   "description": "__MSG_extDesc__",
   "homepage_url": "https://www.greasespot.net/",
   "icons": {
@@ -33,6 +33,7 @@
       "/src/bg/execute.js",
       "/src/bg/export-db.js",
       "/src/bg/on-message.js",
+      "/src/bg/on-user-script-menu-command.js",
       "/src/bg/on-user-script-notification.js",
       "/src/bg/on-user-script-open-in-tab.js",
       "/src/bg/on-user-script-xhr.js",
@@ -48,6 +49,7 @@
       "/src/supported-apis.js",
       "/src/user-script-obj.js",
       "/src/util/check-api-call-allowed.js",
+      "/src/util/iconUrl.js",
       "/src/util/log-unhandled-error.js",
       "/src/util/open-editor.js",
       "/third-party/convert2RegExp.js",
@@ -57,8 +59,7 @@
 
       "/src/bg/execute.run.js",
       "/src/bg/user-script-detect.run.js",
-      "/src/bg/user-script-registry.run.js",
-      "/src/bg/welcome.run.js"
+      "/src/bg/user-script-registry.run.js"
     ]
   },
 

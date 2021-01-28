@@ -1,5 +1,5 @@
 :root {
-  --focus-color: hsla(0, 0%, 80%, 0.3);
+  --focus-color: rgba(0, 0, 0, 0.15);
 }
 
 
@@ -21,6 +21,7 @@ body#rendering { display: none; }
   max-height: 347px;
   overflow-y: auto;
 }
+#open-menu-commands ~ #script-list-scroll { max-height: 331px; }
 
 hr {
   margin: 6px 0;
@@ -41,8 +42,17 @@ section {
   width: 100vw;
 }
 
+/* The active section gets focus so screen readers report the switch to a new
+ * section like a dialog. We don't want the whole section to get a focus
+ * outline visually.
+ */
+section:focus {
+  outline: none;
+}
+
 /* Hide non-main sections by default. */
 section.options,
+section.menu-commands,
 section.user-script,
 section.user-script-options
 {
@@ -59,6 +69,7 @@ body#main-menu section.main-menu
 
 /* Slide the other menu in when it's active. */
 body#options section.options,
+body#menu-commands section.menu-commands,
 body#user-script section.user-script,
 body#user-script-options section.user-script-options
 { margin-left: -100vw; }
@@ -70,7 +81,7 @@ body#user-script-options section.user-script
 
 section header {
   color: -moz-fieldText;
-  overflow-x: hidden;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -85,6 +96,11 @@ section h2 {
   font-weight: bold;
   margin: 0;
   padding: 7px 12px 1px 10px;
+}
+
+section h2 a {
+  color: black;
+  float: right;
 }
 
 
@@ -120,10 +136,10 @@ menuitem {
   white-space: nowrap;
 }
 menuitem:focus {
-  background-color: hsla(0, 0%, 80%, 0.3);
+  background-color: var(--focus-color);
   outline: none;
 }
-menuitem[disabled] {
+menuitem.disabled {
   opacity: 0.65;
 }
 menuitem .arrow {
@@ -189,11 +205,6 @@ section.user-script-options menu {
   overflow-y: auto;
 }
 
-section.user-script-options h2 a {
-  color: black;
-  float: right;
-}
-
 section.user-script-options textarea {
   margin-bottom: 3px;
 }
@@ -217,4 +228,11 @@ section.options #add-exclude-current {
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 90vw;
+}
+
+/***************************** MENU COMMANDS *********************************/
+
+section.menu-commands .access-key {
+  text-decoration: underline;
+  text-transform: uppercase;
 }
